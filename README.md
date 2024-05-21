@@ -1,46 +1,140 @@
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Ekumen-OS/beluga/assets/33042669/45f1d364-4c93-48b8-8912-f5b879ecc76a">
-  <source media="(prefers-color-scheme: light)" srcset="https://github.com/Ekumen-OS/beluga/assets/33042669/83b32f5b-9102-4266-83bd-33c0427cb208">
-  <img alt="Shows the Beluga logo." src="https://github.com/Ekumen-OS/beluga/assets/33042669/83b32f5b-9102-4266-83bd-33c0427cb208">
-</picture>
+# Beluga AMCL
 
----
+Beluga AMCL is a ROS node based on the [Beluga](../beluga) library that aims to be fully compatible with both [Navigation 2 AMCL][nav2_amcl] and [Navigation AMCL][amcl] nodes.<br/>
+The compatibility between `beluga_amcl` and its longstanding counterparts in the ROS ecosystem provides a simple migration path for projects that want to be able to integrate the power and modularity of the Beluga library in an existing `nav2_amcl`-based (or `amcl`-based) project.
 
-[![CI pipeline](https://github.com/Ekumen-OS/beluga/actions/workflows/ci_pipeline.yml/badge.svg?branch=main)](https://github.com/Ekumen-OS/beluga/actions/workflows/ci_pipeline.yml?query=branch:main)
-[![codecov](https://codecov.io/gh/Ekumen-OS/beluga/branch/main/graph/badge.svg?token=rK7BNC5giK)](https://codecov.io/gh/Ekumen-OS/beluga)
-[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
-[![License Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+## Table of Contents
 
-> [!TIP]
-> For the latest stable version of our codebase, please refer to the [release](https://github.com/Ekumen-OS/beluga/tree/release) branch.
-> If you are interested in ongoing development and cutting-edge features, the [main](https://github.com/Ekumen-OS/beluga/tree/main) branch is the place to be.
+- [Beluga AMCL](#beluga-amcl)
+  - [Table of Contents](#table-of-contents)
+  - [ROS 2 Interface](#ros-2-interface)
+    - [Parameters](#parameters)
+    - [Subscribed Topics](#subscribed-topics)
+    - [Published Topics](#published-topics)
+    - [Published Transforms](#published-transforms)
+    - [Advertised Services](#advertised-services)
+  - [ROS 1 Interface](#ros-1-interface)
+    - [Parameters](#parameters-1)
+    - [Subscribed Topics](#subscribed-topics-1)
+    - [Published Topics](#published-topics-1)
+    - [Published Transforms](#published-transforms-1)
+    - [Advertised Services](#advertised-services-1)
+    - [Called Services](#called-services)
+  - [Performance](#performance)
+  - [Next Steps](#next-steps)
 
-## 🌐 Overview
+## ROS 2 Interface
 
-Beluga is an extensible C++17 library with a ground-up implementation of the Monte Carlo Localization (MCL) family of estimation algorithms featuring:
+### Parameters
 
-- A modular design based on orthogonal components.
-- Emphasis on the prevention of regressions and facilitation of code improvements through test coverage.
-- Semi-automated benchmarks that can be used to validate different configurations.
+Beluga AMCL currently supports the majority of ROS parameters used in [Navigation 2 AMCL][nav2_amcl].<br/>
+See [Beluga AMCL documentation](https://ekumen-os.github.io/beluga/packages/beluga_amcl/docs) for further reference.
 
-https://github.com/Ekumen-OS/beluga/assets/33042669/98bda0ee-a633-4e35-8743-72a9ab30b494
+### Subscribed Topics
 
-<p align="center"><i><b>Beluga AMCL</b> running on an <b>Andino</b> robot (Raspberry Pi 4B), go to <a href="https://github.com/Ekumen-OS/andino">Ekumen-OS/andino</a> for more details!</i></p>
+The subscribed topic names can be changed with the parameters `map_topic`, `scan_topic` and `initial_pose_topic`.
 
-## 📦 Packages
+| Topic            | Type                                      | Description                                                                 |
+|------------------|-------------------------------------------|-----------------------------------------------------------------------------|
+| `map`            | `nav_msgs/OccupancyGrid`                  | Input topic for map updates.                                                |
+| `scan`           | `sensor_msgs/LaserScan`                   | Input topic for laser scan updates.                                         |
+| `initial_pose`   | `geometry_msgs/PoseWithCovarianceStamped` | Input topic for pose mean and covariance to initialize the particle filter. |
 
-This repository contains the following packages:
+### Published Topics
 
-| Package                                      | Description                                                                                                             |
-|----------------------------------------------| ------------------------------------------------------------------------------------------------------------------------|
-| [`beluga`](beluga)                           | A ROS-agnostic extensible library to implement algorithms based on particle filters.                                    |
-| [`beluga_ros`](beluga)                       | A ROS library, providing utilities to interface ROS with Beluga.                                                        |
-| [`beluga_amcl`](beluga_amcl)                 | A ROS wrapper, providing an executable node and component (or nodelet).<br> It provides interface parity with `nav2_amcl` (and `amcl`). |
-| [`beluga_example`](beluga_example)           | Example launch files, showing how to run Beluga-based nodes.                                                            |
-| [`beluga_benchmark`](beluga_benchmark)       | Scripts to benchmark, profile and also compare Beluga with other MCL implementations.                                   |
-| [`beluga_system_tests`](beluga_system_tests) | System integration tests for Beluga.                                                                                    |
+| Topic            | Type                                      | Description                                                              |
+|------------------|-------------------------------------------|--------------------------------------------------------------------------|
+| `particle_cloud` | `geometry_msgs/PoseArray`                 | Output topic for particle cloud published at a fixed frequency.          |
+| `pose`           | `geometry_msgs/PoseWithCovarianceStamped` | Output topic for estimated pose mean and covariance in map frame.        |
 
-## ⚙️ First Steps
+### Published Transforms
 
-- Go check the [project documentation](https://ekumen-os.github.io/beluga).
-- Read the [contributing guidelines](CONTRIBUTING.md).
+The frame names can be changed with the parameters `global_frame_id`, `odom_frame_id` and `base_frame_id`.
+Defaults are `map`, `odom` and `base`.
+
+| Transform         | Description                                                                                        |
+|-------------------|----------------------------------------------------------------------------------------------------|
+| `odom` to `base`  | Input transform used by motion models and resampling policies.                                     |
+| `base` to `laser` | Input transform used to convert laser scan points to base frame.                                   |
+| `map` to `odom`   | Output transform calculated from the estimated pose mean and the current _odom-to-base_ transform. |
+
+### Advertised Services
+
+| Topic                              | Type             | Description                                                                   |
+|------------------------------------|------------------|-------------------------------------------------------------------------------|
+| `reinitialize_global_localization` | `std_srvs/Empty` | Request to reinitialize global localization without an initial pose estimate. |
+| `request_nomotion_update`          | `std_srvs/Empty` | Trigger a forced update of the filter estimates.                              |
+
+## ROS 1 Interface
+
+### Parameters
+
+Beluga AMCL currently supports the majority of ROS parameters used in [AMCL][amcl].<br/>
+See [Beluga AMCL parameter reference](docs/PARAMETERS.md) for detailed information.
+
+### Subscribed Topics
+
+The subscribed topic names can be changed with the parameters `map_topic`, `scan_topic` and `initial_pose_topic`.
+
+| Topic            | Type                                      | Description                                                                 |
+|------------------|-------------------------------------------|-----------------------------------------------------------------------------|
+| `map`            | `nav_msgs/OccupancyGrid`                  | Input topic for map updates.                                                |
+| `scan`           | `sensor_msgs/LaserScan`                   | Input topic for laser scan updates.                                         |
+| `initialpose`    | `geometry_msgs/PoseWithCovarianceStamped` | Input topic for pose mean and covariance to initialize the particle filter. |
+
+### Published Topics
+
+| Topic            | Type                                      | Description                                                              |
+|------------------|-------------------------------------------|--------------------------------------------------------------------------|
+| `particlecloud`  | `geometry_msgs/PoseArray`                 | Output topic for particle cloud published at a fixed frequency.          |
+| `amcl_pose`      | `geometry_msgs/PoseWithCovarianceStamped` | Output topic for estimated pose mean and covariance in map frame.        |
+| `diagnostics`    | `diagnostic_msgs/DiagnosticArray`         | Output topic for node diagnostics.                                       |
+
+### Published Transforms
+
+The frame names can be changed with the parameters `global_frame_id`, `odom_frame_id` and `base_frame_id`.
+Defaults are `map`, `odom` and `base`.
+
+| Transform         | Description                                                                                        |
+|-------------------|----------------------------------------------------------------------------------------------------|
+| `odom` to `base`  | Input transform used by motion models and resampling policies.                                     |
+| `base` to `laser` | Input transform used to convert laser scan points to base frame.                                   |
+| `map` to `odom`   | Output transform calculated from the estimated pose mean and the current _odom-to-base_ transform. |
+
+### Advertised Services
+
+| Topic                              | Type              | Description                                                                   |
+|------------------------------------|-------------------|-------------------------------------------------------------------------------|
+| `global_localization`              | `std_srvs/Empty`  | Request to reinitialize global localization without an initial pose estimate. |
+| `request_nomotion_update`          | `std_srvs/Empty`  | Trigger a forced update of the filter estimates.                              |
+| `set_map`                          | `nav_msgs/SetMap` | Set a new map and initial pose estimate.                                      |
+
+### Called Services
+
+| Topic                              | Type              | Description                                                                   |
+|------------------------------------|-------------------|-------------------------------------------------------------------------------|
+| `static_map`                       | `nav_msgs/GetMap` | To retrieve map on initialization, if `use_map_topic` parameter is `false`    |
+
+## Performance
+
+Performance reports are periodically generated and uploaded to track performance improvements and regressions. These reports are generated using a set of scripts in the [beluga_benchmark](../beluga_benchmark) package which can be used to compare the performance of `beluga_amcl` against that of `nav2_amcl` using a synthetic dataset.
+
+The following plot displays the RSS (Resident Set Size), CPU usage, APE (Absolute Pose Error) and processing latency statistics for both  `beluga_amcl` and `nav2_amcl`, with particle sizes ranging between 250 and 200000 and sensor model `likelihood field`.
+
+![Beluga vs Nav2 AMCL](../beluga_benchmark/docs/reports/2023-09-02/likelihood_beluga_vs_beluga_vs_amcl.png)
+
+The following plot displays the RSS (Resident Set Size), CPU usage, APE (Absolute Pose Error) and processing latency statistics for both  `beluga_amcl` and `nav2_amcl`, with particle sizes ranging between 250 and 200000 and sensor model `beam`.
+
+![Beluga vs Nav2 AMCL](../beluga_benchmark/docs/reports/2023-09-02/beam_beluga_vs_beluga_vs_amcl.png)
+
+Further details can be found in [the reports folder here](../beluga_benchmark/docs/reports/).
+
+## Next Steps
+
+- See [example launch files](../beluga_example) showing how to run Beluga-based nodes.
+- See [available benchmarks](../beluga_benchmark) for scripts and comparison with other AMCL implementations.
+
+[amcl]: https://github.com/ros-planning/navigation/tree/noetic-devel/amcl
+[nav2_amcl]: https://github.com/ros-planning/navigation2/tree/main/nav2_amcl
+[nav2_configuration_guide]: https://navigation.ros.org/configuration/packages/configuring-amcl.html
+[fox2001]: https://dl.acm.org/doi/10.5555/2980539.2980632
