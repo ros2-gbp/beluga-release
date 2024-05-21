@@ -1,0 +1,12 @@
+Source: ros-jazzy-beluga-amcl
+Section: misc
+Priority: optional
+Maintainer: Gerardo Puga <glpuga@ekumenlabs.com>
+Build-Depends: debhelper (>= 9.0.0), ros-jazzy-ament-cmake, ros-jazzy-ament-cmake-gmock <!nocheck>, ros-jazzy-ament-cmake-gtest <!nocheck>, ros-jazzy-beluga, ros-jazzy-beluga-ros, ros-jazzy-bondcpp, ros-jazzy-message-filters, ros-jazzy-rclcpp, ros-jazzy-rclcpp-components, ros-jazzy-rclcpp-lifecycle, ros-jazzy-std-srvs, ros-jazzy-ros-workspace
+Homepage: 
+Standards-Version: 3.9.2
+
+Package: ros-jazzy-beluga-amcl
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, ros-jazzy-beluga, ros-jazzy-beluga-ros, ros-jazzy-bondcpp, ros-jazzy-message-filters, ros-jazzy-rclcpp, ros-jazzy-rclcpp-components, ros-jazzy-rclcpp-lifecycle, ros-jazzy-std-srvs, ros-jazzy-ros-workspace
+Description: An AMCL node implementation for ROS2 using Beluga.
