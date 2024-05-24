@@ -1,43 +1,46 @@
-# Beluga
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Ekumen-OS/beluga/assets/33042669/45f1d364-4c93-48b8-8912-f5b879ecc76a">
+  <source media="(prefers-color-scheme: light)" srcset="https://github.com/Ekumen-OS/beluga/assets/33042669/83b32f5b-9102-4266-83bd-33c0427cb208">
+  <img alt="Shows the Beluga logo." src="https://github.com/Ekumen-OS/beluga/assets/33042669/83b32f5b-9102-4266-83bd-33c0427cb208">
+</picture>
 
-Beluga is a ROS-agnostic C++17 library that provides implementations for Monte Carlo-based localization algorithms widely used in robotics applications.
-Its modularity allows users to compose solutions from reusable modules and to combine them with new ones to configure the MCL algorithm that best suits their needs.
+---
 
-## Features
+[![CI pipeline](https://github.com/Ekumen-OS/beluga/actions/workflows/ci_pipeline.yml/badge.svg?branch=main)](https://github.com/Ekumen-OS/beluga/actions/workflows/ci_pipeline.yml?query=branch:main)
+[![codecov](https://codecov.io/gh/Ekumen-OS/beluga/branch/main/graph/badge.svg?token=rK7BNC5giK)](https://codecov.io/gh/Ekumen-OS/beluga)
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
+[![License Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-The current set of features includes:
+> [!TIP]
+> For the latest stable version of our codebase, please refer to the [release](https://github.com/Ekumen-OS/beluga/tree/release) branch.
+> If you are interested in ongoing development and cutting-edge features, the [main](https://github.com/Ekumen-OS/beluga/tree/main) branch is the place to be.
 
-- Particle containers:
-  - Support for [Array-of-Structures and Structure-of-Arrays][aos_soa] tuple containers
-- Composable range adaptor views, actions, and algorithms:
-  - Multivariate normal distributions in SE(2) and SE(3) space
-  - Multivariate uniform distributions in SE(2) compatible with occupancy grids
-  - Multinomial resampling from a particle range
-  - [Adaptive KLD resampling][fox2001]
-  - [Selective resampling][grisetti2007], on-motion resampling, and interval resampling policies
-  - Support for sequential and parallel execution policies
-  - Weighted mean and covariance statistics for pose estimation
-- Sensor models:
-  - Likelihood field model
-  - Beam model
-  - Landmark-based models (using landmark position or bearing)
-- Motion models:
-  - Differential drive model
-  - Omnidirectional model
+## 🌐 Overview
 
-## Documentation
+Beluga is an extensible C++17 library with a ground-up implementation of the Monte Carlo Localization (MCL) family of estimation algorithms featuring:
 
-Auto-generated Doxygen documentation can be found in https://ekumen-os.github.io/beluga/.
+- A modular design based on orthogonal components.
+- Emphasis on the prevention of regressions and facilitation of code improvements through test coverage.
+- Semi-automated benchmarks that can be used to validate different configurations.
 
-## Dependencies
+https://github.com/Ekumen-OS/beluga/assets/33042669/98bda0ee-a633-4e35-8743-72a9ab30b494
 
-Beluga is built on top of the following open source libraries:
+<p align="center"><i><b>Beluga AMCL</b> running on an <b>Andino</b> robot (Raspberry Pi 4B), go to <a href="https://github.com/Ekumen-OS/andino">Ekumen-OS/andino</a> for more details!</i></p>
 
-- [Eigen](https://gitlab.com/libeigen/eigen): A well-known C++ template library for linear algebra: matrices, vectors, numerical solvers, and related algorithms.
-- [Sophus](https://github.com/strasdat/Sophus): A C++ implementation of Lie groups using Eigen.
-- [Range](https://github.com/ericniebler/range-v3): The basis library for C++20's `std::ranges`.
-- [libciabatta](https://github.com/atomgalaxy/libciabatta): A composable mixin support library.
+## 📦 Packages
 
-[aos_soa]: https://en.wikipedia.org/wiki/AoS_and_SoA
-[fox2001]: https://dl.acm.org/doi/10.5555/2980539.2980632
-[grisetti2007]: https://doi.org/10.1109/TRO.2006.889486
+This repository contains the following packages:
+
+| Package                                      | Description                                                                                                             |
+|----------------------------------------------| ------------------------------------------------------------------------------------------------------------------------|
+| [`beluga`](beluga)                           | A ROS-agnostic extensible library to implement algorithms based on particle filters.                                    |
+| [`beluga_ros`](beluga)                       | A ROS library, providing utilities to interface ROS with Beluga.                                                        |
+| [`beluga_amcl`](beluga_amcl)                 | A ROS wrapper, providing an executable node and component (or nodelet).<br> It provides interface parity with `nav2_amcl` (and `amcl`). |
+| [`beluga_example`](beluga_example)           | Example launch files, showing how to run Beluga-based nodes.                                                            |
+| [`beluga_benchmark`](beluga_benchmark)       | Scripts to benchmark, profile and also compare Beluga with other MCL implementations.                                   |
+| [`beluga_system_tests`](beluga_system_tests) | System integration tests for Beluga.                                                                                    |
+
+## ⚙️ First Steps
+
+- Go check the [project documentation](https://ekumen-os.github.io/beluga).
+- Read the [contributing guidelines](CONTRIBUTING.md).
