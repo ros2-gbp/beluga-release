@@ -1,0 +1,12 @@
+Source: ros-jazzy-beluga-ros
+Section: misc
+Priority: optional
+Maintainer: Gerardo Puga <glpuga@ekumenlabs.com>
+Build-Depends: debhelper (>= 9.0.0), ros-jazzy-ament-cmake, ros-jazzy-ament-cmake-gmock <!nocheck>, ros-jazzy-ament-cmake-gtest <!nocheck>, ros-jazzy-ament-cmake-python, ros-jazzy-beluga, ros-jazzy-geometry-msgs, ros-jazzy-nav-msgs, ros-jazzy-sensor-msgs, ros-jazzy-std-msgs, ros-jazzy-tf2, ros-jazzy-tf2-eigen, ros-jazzy-tf2-geometry-msgs, ros-jazzy-tf2-ros, ros-jazzy-visualization-msgs, ros-jazzy-ros-workspace
+Homepage: 
+Standards-Version: 3.9.2
+
+Package: ros-jazzy-beluga-ros
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, python3-h5py, python3-matplotlib, python3-numpy, python3-scipy, ros-jazzy-beluga, ros-jazzy-geometry-msgs, ros-jazzy-nav-msgs, ros-jazzy-sensor-msgs, ros-jazzy-std-msgs, ros-jazzy-tf2, ros-jazzy-tf2-eigen, ros-jazzy-tf2-geometry-msgs, ros-jazzy-tf2-ros, ros-jazzy-visualization-msgs, ros-jazzy-ros-workspace
+Description: Utilities to interface ROS with Beluga.
