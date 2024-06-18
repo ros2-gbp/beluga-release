@@ -1,0 +1,12 @@
+Source: ros-humble-beluga-ros
+Section: misc
+Priority: optional
+Maintainer: Gerardo Puga <glpuga@ekumenlabs.com>
+Build-Depends: debhelper (>= 9.0.0), ros-humble-ament-cmake, ros-humble-ament-cmake-gmock <!nocheck>, ros-humble-ament-cmake-gtest <!nocheck>, ros-humble-ament-cmake-python, ros-humble-beluga, ros-humble-geometry-msgs, ros-humble-nav-msgs, ros-humble-sensor-msgs, ros-humble-std-msgs, ros-humble-tf2, ros-humble-tf2-eigen, ros-humble-tf2-geometry-msgs, ros-humble-tf2-ros, ros-humble-visualization-msgs, ros-humble-ros-workspace
+Homepage: 
+Standards-Version: 3.9.2
+
+Package: ros-humble-beluga-ros
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, python3-h5py, python3-matplotlib, python3-numpy, python3-scipy, ros-humble-beluga, ros-humble-geometry-msgs, ros-humble-nav-msgs, ros-humble-sensor-msgs, ros-humble-std-msgs, ros-humble-tf2, ros-humble-tf2-eigen, ros-humble-tf2-geometry-msgs, ros-humble-tf2-ros, ros-humble-visualization-msgs, ros-humble-ros-workspace
+Description: Utilities to interface ROS with Beluga.
