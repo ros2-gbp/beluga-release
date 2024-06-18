@@ -1,3 +1,35 @@
+## beluga (jazzy) - 2.0.2-1
+
+The packages in the `beluga` repository were released into the `jazzy` distro by running `/usr/bin/bloom-release --rosdistro jazzy --track jazzy beluga` on `Tue, 18 Jun 2024 21:08:09 -0000`
+
+These packages were released:
+- `beluga`
+- `beluga_amcl`
+- `beluga_ros`
+
+These packages were explicitly ignored:
+- `beluga_benchmark`
+- `beluga_example`
+- `beluga_system_tests`
+- `beluga_tutorial`
+
+Version of package(s) in repository `beluga`:
+
+- upstream repository: https://github.com/Ekumen-OS/beluga.git
+- release repository: https://github.com/ros2-gbp/beluga-release.git
+- rosdistro version: `2.0.1-1`
+- old version: `2.0.1-1`
+- new version: `2.0.2-1`
+
+Versions of tools used:
+
+- bloom version: `0.12.0`
+- catkin_pkg version: `1.0.0`
+- rosdep version: `0.24.0`
+- rosdistro version: `0.9.1`
+- vcstools version: `0.1.42`
+
+
 ## beluga (iron) - 2.0.2-1
 
 The packages in the `beluga` repository were released into the `iron` distro by running `/usr/bin/bloom-release --rosdistro iron --track iron beluga` on `Tue, 18 Jun 2024 21:03:42 -0000`
