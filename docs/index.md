@@ -1,150 +1,46 @@
-<!--
-Copyright 2024 Ekumen, Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
-
-```{image} _images/logo_with_name_dark.png
-:class: only-dark
-:alt: Shows Beluga logo.
-```
-
-```{image} _images/logo_with_name_light.png
-:class: only-light
-:alt: Shows Beluga logo.
-```
-
----
-
-[![CI pipeline](https://github.com/Ekumen-OS/beluga/actions/workflows/ci_pipeline.yml/badge.svg?branch=main)](https://github.com/Ekumen-OS/beluga/actions/workflows/ci_pipeline.yml?query=branch:main)
-[![codecov](https://codecov.io/gh/Ekumen-OS/beluga/branch/main/graph/badge.svg?token=rK7BNC5giK)](https://codecov.io/gh/Ekumen-OS/beluga)
-[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
-[![License Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://github.com/Ekumen-OS/beluga/blob/main/LICENSE)
-
 # Overview
 
 ```{toctree}
 :hidden:
 :maxdepth: 1
-:caption: Getting started
 
-getting-started/installation
-getting-started/quickstart
+API Reference <_doxygen/generated/reference/html/index>
 ```
 
-```{toctree}
-:hidden:
-:maxdepth: 1
-:caption: Concepts
-
-concepts/key-concepts
-concepts/design-principles
-concepts/architecture
-```
-
-```{toctree}
-:hidden:
-:maxdepth: 1
-:caption: Guides
-
-guides/using-beluga-amcl
-guides/extending-beluga
-guides/profiling-beluga
-guides/benchmarking-beluga
-```
-
-```{toctree}
-:hidden:
-:maxdepth: 1
-:caption: Tutorials
-
-tutorials/particle-filtering
-tutorials/nav2-integration
-```
-
-```{toctree}
-:hidden:
-:maxdepth: 1
-:caption: Packages
-
-beluga <packages/beluga/docs/index>
-beluga_ros <packages/beluga_ros/docs/index>
-beluga_amcl <packages/beluga_amcl/docs/index>
-```
-
-```{toctree}
-:hidden:
-:maxdepth: 1
-:caption: Roadmap
-
-roadmap/features
-roadmap/releases
-```
-
-```{toctree}
-:hidden:
-:maxdepth: 1
-:caption: Resources
-
-resources/bibliography
-```
-
-```{toctree}
-:hidden:
-:maxdepth: 1
-:caption: About
-
-about/rationale
-about/contact
-```
-
-Beluga is an open source toolkit for Monte Carlo Localization (MCL), with a strong focus on code quality and performance.
-
-:::{figure} ./_images/beluga_andino.gif
-:alt: Short video of Andino running Beluga.
-
-Beluga AMCL running on an [Andino](https://github.com/Ekumen-OS/andino) robot (Raspberry Pi 4B).
-:::
+Beluga is a C++17 library that provides Monte Carlo Localization (MCL) algorithms' implementations widely used in robotics applications.
+Its modularity allows users to compose solutions from reusable modules and to combine them with new ones to configure the MCL algorithm
+that best suits their needs.
 
 ## Features
 
-- Bootstrap particle filtering
-- Adaptive resampling policies
-- Motion models for wheeled robots
-- Sensor models for 2D rangers
-- ROS 1 and ROS 2 integration
+The current set of features includes:
 
-## Support
+- Particle containers:
+  - Support for [Array-of-Structures and Structure-of-Arrays][aos_soa] tuple containers
+- Composable range adaptor views, actions, and algorithms:
+  - Multivariate normal distributions in SE(2) and SE(3) space
+  - Multivariate uniform distributions in SE(2) compatible with occupancy grids
+  - Multinomial resampling from a particle range
+  - [Adaptive KLD resampling][fox2001]
+  - [Selective resampling][grisetti2007], on-motion resampling, and interval resampling policies
+  - Support for sequential and parallel execution policies
+  - Weighted mean and covariance statistics for pose estimation
+- Sensor models:
+  - Likelihood field model
+  - Beam model
+  - Landmark-based models (using landmark position or bearing)
+- Motion models:
+  - Differential drive model
+  - Omnidirectional model
 
-Beluga is supported on a number of ROS 1 and ROS 2 distributions, primarily on Linux platforms:
+## Dependencies
 
-::::{grid}
-:::{grid-item-card} ROS 1 Noetic Ninjemys
-:text-align: center
-![ROS 1 Noetic Ninjemys logo](./_images/noetic_ninjemys_logo.png)
-:::
-:::{grid-item-card} ROS 2 Humble Hawksbill
-:text-align: center
-![ROS 2 Humble Hawksbill logo](./_images/humble_hawksbill_logo.png)
-:::
-:::{grid-item-card} ROS 2 Iron Irwini
-:text-align: center
-![ROS 2 Iron Irwini logo](./_images/iron_irwini_logo.jpg)
-:::
-:::{grid-item-card} ROS 2 Jazzy Jalisco
-:text-align: center
-![ROS 2 Jazzy Jalisco logo](./_images/jazzy_jalisco_logo.png)
-:::
-::::
+Beluga is built on top of the following open source libraries:
 
-See [REP-0003](https://ros.org/reps/rep-0003.html) and  [REP-2000](https://www.ros.org/reps/rep-2000.html) for further reference on target platforms and support timelines.
+- [Eigen](https://gitlab.com/libeigen/eigen): A well-known C++ template library for linear algebra: matrices, vectors, numerical solvers, and related algorithms.
+- [Sophus](https://github.com/strasdat/Sophus): A C++ implementation of Lie groups using Eigen.
+- [Range](https://github.com/ericniebler/range-v3): The basis library for C++20's `std::ranges`.
+
+[aos_soa]: https://en.wikipedia.org/wiki/AoS_and_SoA
+[fox2001]: https://dl.acm.org/doi/10.5555/2980539.2980632
+[grisetti2007]: https://doi.org/10.1109/TRO.2006.889486
