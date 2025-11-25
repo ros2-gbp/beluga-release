@@ -23,6 +23,8 @@
 
 #include <sophus/se3.hpp>
 
+#include <sensor_msgs/msg/laser_scan.hpp>
+
 /**
  * \file
  * \brief Implementation of `sensor_msgs/LaserScan` wrapper type.
@@ -47,7 +49,7 @@ class LaserScan : public beluga::BaseLaserScan<LaserScan> {
   /// \param min_range Minimum allowed range value (in meters).
   /// \param max_range Maximum allowed range value (in meters).
   explicit LaserScan(
-      beluga_ros::msg::LaserScanConstSharedPtr scan,
+      sensor_msgs::msg::LaserScan::ConstSharedPtr scan,
       Sophus::SE3d origin = Sophus::SE3d(),
       std::size_t max_beams = std::numeric_limits<std::size_t>::max(),
       Scalar min_range = std::numeric_limits<Scalar>::min(),
@@ -77,6 +79,9 @@ class LaserScan : public beluga::BaseLaserScan<LaserScan> {
            ranges::views::transform([](auto value) { return static_cast<Scalar>(value); });
   }
 
+  /// Get the number of beams in the scan.
+  [[nodiscard]] std::size_t size() const { return scan_->ranges.size(); }
+
   /// Get the minimum range measurement.
   [[nodiscard]] auto min_range() const { return min_range_; }
 
@@ -84,7 +89,7 @@ class LaserScan : public beluga::BaseLaserScan<LaserScan> {
   [[nodiscard]] auto max_range() const { return max_range_; }
 
  private:
-  beluga_ros::msg::LaserScanConstSharedPtr scan_;
+  sensor_msgs::msg::LaserScan::ConstSharedPtr scan_;
   Sophus::SE3d origin_;
   std::size_t max_beams_;
   Scalar min_range_;
