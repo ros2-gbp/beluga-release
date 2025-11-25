@@ -19,11 +19,25 @@
 #include <utility>
 #include <variant>
 
-#include <beluga/beluga.hpp>
+#include <range/v3/range/conversion.hpp>
+#include <range/v3/view/take_exactly.hpp>
+
+#include <sophus/se2.hpp>
+
+#include <beluga/algorithm/spatial_hash.hpp>
+#include <beluga/algorithm/thrun_recovery_probability_estimator.hpp>
+#include <beluga/containers.hpp>
+#include <beluga/motion.hpp>
+#include <beluga/policies.hpp>
+#include <beluga/random.hpp>
+#include <beluga/sensor.hpp>
+#include <beluga/sensor/data/value_grid.hpp>
+#include <beluga/sensor/primitives.hpp>
+#include <beluga/views/sample.hpp>
+
 #include <beluga_ros/laser_scan.hpp>
 #include <beluga_ros/occupancy_grid.hpp>
-
-#include <range/v3/view/take_exactly.hpp>
+#include <beluga_ros/sparse_point_cloud.hpp>
 
 /**
  * \file
@@ -92,13 +106,14 @@ class Amcl {
 
   /// Motion model variant type for runtime selection support.
   using motion_model_variant = std::variant<
-      beluga::DifferentialDriveModel,     //
+      beluga::DifferentialDriveModel2d,   //
       beluga::OmnidirectionalDriveModel,  //
       beluga::StationaryModel>;
 
   /// Sensor model variant type for runtime selection support.
   using sensor_model_variant = std::variant<
-      beluga::LikelihoodFieldModel<beluga_ros::OccupancyGrid>,  //
+      beluga::LikelihoodFieldModel<beluga_ros::OccupancyGrid>,      //
+      beluga::LikelihoodFieldProbModel<beluga_ros::OccupancyGrid>,  //
       beluga::BeamSensorModel<beluga_ros::OccupancyGrid>>;
 
   /// Execution policy variant type for runtime selection support.
@@ -116,24 +131,61 @@ class Amcl {
       beluga_ros::OccupancyGrid map,
       motion_model_variant motion_model,
       sensor_model_variant sensor_model,
-      const AmclParams& params = AmclParams(),
-      execution_policy_variant execution_policy = std::execution::seq)
-      : params_{params},
-        map_distribution_{map},
-        motion_model_{std::move(motion_model)},
-        sensor_model_{std::move(sensor_model)},
-        execution_policy_{std::move(execution_policy)},
-        spatial_hasher_{params_.spatial_resolution_x, params_.spatial_resolution_y, params_.spatial_resolution_theta},
-        random_probability_estimator_{params_.alpha_slow, params_.alpha_fast},
-        update_policy_{beluga::policies::on_motion(params_.update_min_d, params_.update_min_a)},
-        resample_policy_{beluga::policies::every_n(params_.resample_interval)} {
-    if (params_.selective_resampling) {
-      resample_policy_ = resample_policy_ && beluga::policies::on_effective_size_drop;
-    }
-  }
+      const AmclParams& params,
+      execution_policy_variant execution_policy);
 
   /// Returns a reference to the current set of particles.
   [[nodiscard]] const auto& particles() const { return particles_; }
+
+  /// Returns a reference to the current likelihood field.
+  [[nodiscard]] const auto& likelihood_field() const {
+    std::optional<std::reference_wrapper<const beluga::ValueGrid2<float>>> result;
+
+    std::visit(
+        [&result](const auto& sensor_model) {
+          using T = std::decay_t<decltype(sensor_model)>;
+          if constexpr (beluga::has_likelihood_field_v<T>) {
+            result = std::cref(sensor_model.likelihood_field());
+          }
+        },
+        sensor_model_);
+
+    if (!result) {
+      throw std::runtime_error("The current sensor model does not support likelihood field");
+    }
+
+    return result->get();
+  }
+
+  /// Returns the current likelihood field origin transform.
+  [[nodiscard]] auto likelihood_field_origin() const {
+    std::optional<Sophus::SE2<double>> result;
+
+    std::visit(
+        [&result](const auto& sensor_model) {
+          using T = std::decay_t<decltype(sensor_model)>;
+          if constexpr (beluga::has_likelihood_field_v<T>) {
+            result = sensor_model.likelihood_field_origin();
+          }
+        },
+        sensor_model_);
+
+    if (!result) {
+      throw std::runtime_error("The current sensor model does not support likelihood field");
+    }
+
+    return *result;  // return by value
+  }
+
+  /// Check if the sensor model bears a likelihood field.
+  [[nodiscard]] bool has_likelihood_field() const {
+    return std::visit(
+        [](const auto& sensor_model) {
+          using T = std::decay_t<decltype(sensor_model)>;
+          return beluga::has_likelihood_field_v<T>;
+        },
+        sensor_model_);
+  }
 
   /// Initialize particles using a custom distribution.
   template <class Distribution>
@@ -157,10 +209,39 @@ class Amcl {
   void initialize_from_map() { initialize(std::ref(map_distribution_)); }
 
   /// Update the map used for localization.
-  void update_map(beluga_ros::OccupancyGrid map) {
-    map_distribution_ = beluga::MultivariateUniformDistribution{map};
-    std::visit([&](auto& sensor_model) { sensor_model.update_map(std::move(map)); }, sensor_model_);
-  }
+  void update_map(beluga_ros::OccupancyGrid map);
+
+  /// Update particles using laser scan data.
+  /**
+   * This method transforms laser scan data from polar to cartesian coordinates in the robot base frame. Then forwards
+   * to the generic update() method which performs the particle filter update step based on motion and sensor
+   * information. See the detailed description of the general update() method below.
+   *
+   * \see update(Sophus::SE2d, std::vector<std::pair<double, double>>&&)
+   *
+   * \param base_pose_in_odom Base pose in the odometry frame.
+   * \param laser_scan Laser scan data.
+   * \return An optional pair containing the estimated pose and covariance after the update,
+   *         or std::nullopt if no update was performed.
+   */
+  auto update(Sophus::SE2d base_pose_in_odom, beluga_ros::LaserScan laser_scan)
+      -> std::optional<std::pair<Sophus::SE2d, Sophus::Matrix3d>>;
+
+  /// Update particles using point cloud data.
+  /**
+   * This method transforms and projects point cloud data onto the z = 0 plane of the robot base frame. Then forwards
+   * the data to the generic update() method that performs the particle filter update step using motion and sensor
+   * information.
+   *
+   * \see update(Sophus::SE2d, std::vector<std::pair<double, double>>&&)
+   *
+   * \param base_pose_in_odom Base pose in the odometry frame.
+   * \param point_cloud Point cloud measurement in the sensor frame; points are projected onto the z=0 plane.
+   * \return An optional pair containing the estimated pose and covariance after the update,
+   *         or std::nullopt if no update was performed.
+   */
+  auto update(Sophus::SE2d base_pose_in_odom, beluga_ros::SparsePointCloud3f point_cloud)
+      -> std::optional<std::pair<Sophus::SE2d, Sophus::Matrix3d>>;
 
   /// Update particles based on motion and sensor information.
   /**
@@ -171,60 +252,12 @@ class Amcl {
    * are resampled to maintain diversity and prevent degeneracy.
    *
    * \param base_pose_in_odom Base pose in the odometry frame.
-   * \param laser_scan Laser scan data.
+   * \param measurement A vector of 2D points representing the sensor measurement in the base frame.
    * \return An optional pair containing the estimated pose and covariance after the update,
    *         or std::nullopt if no update was performed.
    */
-  auto update(Sophus::SE2d base_pose_in_odom, beluga_ros::LaserScan laser_scan)
-      -> std::optional<std::pair<Sophus::SE2d, Sophus::Matrix3d>> {
-    if (particles_.empty()) {
-      return std::nullopt;
-    }
-
-    if (!update_policy_(base_pose_in_odom) && !force_update_) {
-      return std::nullopt;
-    }
-
-    // TODO(nahuel): Remove this once we update the measurement type.
-    auto measurement = laser_scan.points_in_cartesian_coordinates() |  //
-                       ranges::views::transform([&laser_scan](const auto& p) {
-                         const auto result = laser_scan.origin() * Sophus::Vector3d{p.x(), p.y(), 0};
-                         return std::make_pair(result.x(), result.y());
-                       }) |
-                       ranges::to<std::vector>;
-
-    std::visit(
-        [&, this](auto& policy, auto& motion_model, auto& sensor_model) {
-          particles_ |=
-              beluga::actions::propagate(policy, motion_model(control_action_window_ << base_pose_in_odom)) |  //
-              beluga::actions::reweight(policy, sensor_model(std::move(measurement))) |                        //
-              beluga::actions::normalize(policy);
-        },
-        execution_policy_, motion_model_, sensor_model_);
-
-    const double random_state_probability = random_probability_estimator_(particles_);
-
-    if (resample_policy_(particles_)) {
-      auto random_state = ranges::compose(beluga::make_from_state<particle_type>, std::ref(map_distribution_));
-
-      if (random_state_probability > 0.0) {
-        random_probability_estimator_.reset();
-      }
-
-      particles_ |= beluga::views::sample |
-                    beluga::views::random_intersperse(std::move(random_state), random_state_probability) |
-                    beluga::views::take_while_kld(
-                        spatial_hasher_,        //
-                        params_.min_particles,  //
-                        params_.max_particles,  //
-                        params_.kld_epsilon,    //
-                        params_.kld_z) |
-                    beluga::actions::assign;
-    }
-
-    force_update_ = false;
-    return beluga::estimate(beluga::views::states(particles_), beluga::views::weights(particles_));
-  }
+  auto update(Sophus::SE2d base_pose_in_odom, std::vector<std::pair<double, double>>&& measurement)
+      -> std::optional<std::pair<Sophus::SE2d, Sophus::Matrix3d>>;
 
   /// Force a manual update of the particles on the next iteration of the filter.
   void force_update() { force_update_ = true; }
