@@ -17,15 +17,20 @@
 
 #include <memory>
 #include <optional>
+#include <type_traits>
 #include <utility>
 
-#include <message_filters/subscriber.h>
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/message_filter.h>
-#include <tf2_ros/transform_broadcaster.h>
-#include <tf2_ros/transform_listener.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcpp"
+#include <message_filters/subscriber.hpp>
+#pragma GCC diagnostic pop
+
 #include <bondcpp/bond.hpp>
 #include <rclcpp_lifecycle/lifecycle_node.hpp>
+#include <tf2_ros/buffer.hpp>
+#include <tf2_ros/message_filter.hpp>
+#include <tf2_ros/transform_broadcaster.hpp>
+#include <tf2_ros/transform_listener.hpp>
 
 #include <geometry_msgs/msg/pose_array.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
@@ -36,6 +41,8 @@
 
 #include <beluga/beluga.hpp>
 #include <beluga_ros/amcl.hpp>
+#include "beluga_amcl/message_filters.hpp"
+#include "beluga_amcl/ros2_common.hpp"
 
 /**
  * \file
@@ -45,7 +52,7 @@
 namespace beluga_amcl {
 
 /// 2D AMCL as a ROS 2 composable lifecycle node.
-class AmclNode : public rclcpp_lifecycle::LifecycleNode {
+class AmclNode : public BaseAMCLNode {
  public:
   using rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
@@ -54,20 +61,14 @@ class AmclNode : public rclcpp_lifecycle::LifecycleNode {
   ~AmclNode() override;
 
  protected:
-  /// Callback for lifecycle transitions from the UNCONFIGURED state to the INACTIVE state.
-  CallbackReturn on_configure(const rclcpp_lifecycle::State&) override;
-
   /// Callback for lifecycle transitions from the INACTIVE state to the ACTIVE state.
-  CallbackReturn on_activate(const rclcpp_lifecycle::State&) override;
+  void do_activate(const rclcpp_lifecycle::State&) override;
 
   /// Callback for lifecycle transitions from the ACTIVE state to the INACTIVE state.
-  CallbackReturn on_deactivate(const rclcpp_lifecycle::State&) override;
+  void do_deactivate(const rclcpp_lifecycle::State&) override;
 
   /// Callback for lifecycle transitions from the INACTIVE state to the UNCONFIGURED state.
-  CallbackReturn on_cleanup(const rclcpp_lifecycle::State&) override;
-
-  /// Callback for lifecycle transitions from most states to the FINALIZED state.
-  CallbackReturn on_shutdown(const rclcpp_lifecycle::State&) override;
+  void do_cleanup(const rclcpp_lifecycle::State&) override;
 
   /// Get initial pose estimate from parameters if set.
   auto get_initial_estimate() const -> std::optional<std::pair<Sophus::SE2d, Eigen::Matrix3d>>;
@@ -79,9 +80,6 @@ class AmclNode : public rclcpp_lifecycle::LifecycleNode {
   auto get_sensor_model(std::string_view, nav_msgs::msg::OccupancyGrid::SharedPtr) const
       -> beluga_ros::Amcl::sensor_model_variant;
 
-  /// Get execution policy given its name.
-  static auto get_execution_policy(std::string_view) -> beluga_ros::Amcl::execution_policy_variant;
-
   /// Instantiate particle filter given an initial occupancy grid map and the current parametrization.
   auto make_particle_filter(nav_msgs::msg::OccupancyGrid::SharedPtr) const -> std::unique_ptr<beluga_ros::Amcl>;
 
@@ -89,16 +87,26 @@ class AmclNode : public rclcpp_lifecycle::LifecycleNode {
   void map_callback(nav_msgs::msg::OccupancyGrid::SharedPtr);
 
   /// Callback for periodic particle cloud updates.
-  void timer_callback();
+  void do_periodic_timer_callback() override;
 
-  /// Callback for node to configure and activate itself.
-  void autostart_callback();
+  /// Try to look up a tf transform immediately.
+  template <typename TransformT>
+  std::optional<TransformT>
+  lookup_transform(const std::string& target_frame_id, const std::string& source_frame_id, const tf2::TimePoint& stamp);
 
-  /// Callback for laser scan updates.
-  void laser_callback(sensor_msgs::msg::LaserScan::ConstSharedPtr);
+  /// Try to wrap a laser scan message.
+  std::optional<beluga_ros::LaserScan> wrap_sensor_data(const sensor_msgs::msg::LaserScan::ConstSharedPtr& sensor_msg);
+
+  /// Try to wrap a pointcloud message.
+  std::optional<beluga_ros::SparsePointCloud3f> wrap_sensor_data(
+      const sensor_msgs::msg::PointCloud2::ConstSharedPtr& sensor_msg);
+
+  /// Callback for sensor updates.
+  template <typename MessageT>
+  void sensor_callback(const std::shared_ptr<const MessageT>& sensor_msg);
 
   /// Callback for pose (re)initialization.
-  void initial_pose_callback(geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr);
+  void do_initial_pose_callback(geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr) override;
 
   /// Callback for the global relocalization service.
   void global_localization_callback(
@@ -133,46 +141,33 @@ class AmclNode : public rclcpp_lifecycle::LifecycleNode {
    */
   bool initialize_from_map();
 
-  /// Node bond with the lifecycle manager.
-  std::unique_ptr<bond::Bond> bond_;
-
-  /// Timer for periodic particle cloud updates.
-  rclcpp::TimerBase::SharedPtr timer_;
-
-  /// Timer for node to configure and activate itself.
-  rclcpp::TimerBase::SharedPtr autostart_timer_;
-
-  /// Particle cloud publisher.
-  rclcpp_lifecycle::LifecyclePublisher<geometry_msgs::msg::PoseArray>::SharedPtr particle_cloud_pub_;
-  /// Particle markers publisher.
-  rclcpp_lifecycle::LifecyclePublisher<visualization_msgs::msg::MarkerArray>::SharedPtr particle_markers_pub_;
-
-  /// Estimated pose publisher.
-  rclcpp_lifecycle::LifecyclePublisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr pose_pub_;
-
-  /// Pose (re)initialization subscription.
-  rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr initial_pose_sub_;
   /// Occupancy grid map updates subscription.
   rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr map_sub_;
+
   /// Laser scan updates subscription.
-  std::unique_ptr<message_filters::Subscriber<sensor_msgs::msg::LaserScan, rclcpp_lifecycle::LifecycleNode>>
-      laser_scan_sub_;
+  std::unique_ptr<message_filters::Subscriber<sensor_msgs::msg::LaserScan>> laser_scan_sub_;
+
+  /// Point cloud updates subscription.
+  std::unique_ptr<message_filters::Subscriber<sensor_msgs::msg::PointCloud2>> point_cloud_sub_;
+
+  /// Likelihood field publisher
+  rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::OccupancyGrid>::SharedPtr likelihood_field_pub_;
 
   /// Global relocalization service server.
   rclcpp::Service<std_srvs::srv::Empty>::SharedPtr global_localization_server_;
   /// No motion update service server.
   rclcpp::Service<std_srvs::srv::Empty>::SharedPtr nomotion_update_server_;
 
-  /// Transforms buffer.
-  std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
-  /// Transforms broadcaster.
-  std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
-  /// Transforms listener.
-  std::unique_ptr<tf2_ros::TransformListener> tf_listener_;
   /// Transform synchronization filter for laser scan updates.
   std::unique_ptr<tf2_ros::MessageFilter<sensor_msgs::msg::LaserScan>> laser_scan_filter_;
   /// Connection for laser scan updates filter and callback.
-  message_filters::Connection laser_scan_connection_;
+  ::message_filters::Connection laser_scan_connection_;
+
+  /// Transform synchronization filter for laser scan updates.
+  std::unique_ptr<tf2_ros::MessageFilter<sensor_msgs::msg::PointCloud2>> point_cloud_filter_;
+
+  /// Connection for point cloud updates filter and callback.
+  ::message_filters::Connection point_cloud_connection_;
 
   /// Particle filter instance.
   std::unique_ptr<beluga_ros::Amcl> particle_filter_;
