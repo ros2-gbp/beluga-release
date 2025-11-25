@@ -25,7 +25,7 @@
 
 #include <gtest/gtest.h>
 
-#include <tf2/convert.h>
+#include <tf2/convert.hpp>
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -157,7 +157,7 @@ void particle_filter_test(
 // ****************************************************************************
 // Motion model variants.
 // ****************************************************************************
-using MotionModel = std::variant<beluga::DifferentialDriveModel>;
+using MotionModel = std::variant<beluga::DifferentialDriveModel2d>;
 
 auto get_motion_models() {
   return std::vector<MotionModel>{
