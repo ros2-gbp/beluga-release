@@ -32,9 +32,13 @@
 #include <beluga/views/sample.hpp>
 #include <beluga/views/zip.hpp>
 
-#include <beluga_ros/messages.hpp>
 #include <beluga_ros/tf2_eigen.hpp>
 #include <beluga_ros/tf2_sophus.hpp>
+
+#include <geometry_msgs/msg/pose_array.hpp>
+#include <std_msgs/msg/color_rgba.hpp>
+#include <visualization_msgs/msg/marker.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
 
 /**
  * \file
@@ -49,8 +53,8 @@ namespace detail {
 /**
  * Assumes both saturation and value to be 1.
  */
-inline beluga_ros::msg::ColorRGBA alphaHueToRGBA(float hue, float alpha) {
-  beluga_ros::msg::ColorRGBA message;
+inline std_msgs::msg::ColorRGBA alphaHueToRGBA(float hue, float alpha) {
+  std_msgs::msg::ColorRGBA message;
   // https://en.wikipedia.org/wiki/HSL_and_HSV#HSV_to_RGB_alternative
   // specialized for V = S = 1 and using single precision floats because
   // that is what the color message expects.
@@ -81,10 +85,34 @@ struct almost_equal_to<Sophus::SE2<Scalar>> {
 
   /// Compares `a` and `b` for near equality.
   bool operator()(const Sophus::SE2<Scalar>& a, const Sophus::SE2<Scalar>& b) const {
-    using std::abs, std::atan, std::tan;
-    return (abs(a.translation().x() - b.translation().x()) < linear_resolution) &&
-           (abs(a.translation().y() - b.translation().y()) < linear_resolution) &&
-           (abs(atan(tan(a.so2().log() - b.so2().log()))) < angular_resolution);
+    using std::abs;
+    const Sophus::SE2<Scalar> diff = a * b.inverse();
+    return (abs(diff.translation().x()) < linear_resolution) && (abs(diff.translation().y()) < linear_resolution) &&
+           (abs(diff.so2().log()) < angular_resolution);
+  }
+
+  const Scalar linear_resolution;   ///< Resolution for translational coordinates, in meters.
+  const Scalar angular_resolution;  ///< Resolution for rotational coordinates, in radians.
+};
+
+/// std::equal_to equivalent specialized for SE(3) types, with user resolutions.
+template <typename Scalar>
+struct almost_equal_to<Sophus::SE3<Scalar>> {
+  /// Constructs near equality functor.
+  /**
+   * \param _linear_resolution Resolution for translational coordinates, in meters.
+   * \param _angular_resolution Resolution for rotational coordinates, in radians.
+   */
+  explicit almost_equal_to(Scalar _linear_resolution, Scalar _angular_resolution)
+      : linear_resolution(_linear_resolution), angular_resolution(_angular_resolution) {}
+
+  /// Compares `a` and `b` for near equality.
+  bool operator()(const Sophus::SE3<Scalar>& a, const Sophus::SE3<Scalar>& b) const {
+    using std::abs;
+    const Sophus::SE3<Scalar> diff = a * b.inverse();
+    return (abs(diff.translation().x()) < linear_resolution) && (abs(diff.translation().y()) < linear_resolution) &&
+           (abs(diff.translation().z()) < linear_resolution) && (abs(diff.so3().angleX()) < angular_resolution) &&
+           (abs(diff.so3().angleY()) < angular_resolution) && (abs(diff.so3().angleZ()) < angular_resolution);
   }
 
   const Scalar linear_resolution;   ///< Resolution for translational coordinates, in meters.
@@ -107,8 +135,8 @@ template <
     class Scalar = typename State::Scalar,
     typename = std::enable_if_t<
         std::is_same_v<State, typename Sophus::SE2<Scalar>> || std::is_same_v<State, typename Sophus::SE3<Scalar>>>>
-beluga_ros::msg::PoseArray&
-assign_particle_cloud(Particles&& particles, std::size_t size, beluga_ros::msg::PoseArray& message) {
+geometry_msgs::msg::PoseArray&
+assign_particle_cloud(Particles&& particles, std::size_t size, geometry_msgs::msg::PoseArray& message) {
   static_assert(ranges::sized_range<decltype(particles)>);
   message.poses.clear();
   if (ranges::size(particles) > 0) {
@@ -149,12 +177,13 @@ template <
     class State = typename beluga::state_t<Particle>,
     class Weight = typename beluga::weight_t<Particle>,
     class Scalar = typename State::Scalar,
-    typename = std::enable_if_t<std::is_same_v<State, typename Sophus::SE2<Scalar>>>>
-beluga_ros::msg::MarkerArray& assign_particle_cloud(
+    typename = std::enable_if_t<
+        std::is_same_v<State, typename Sophus::SE2<Scalar>> || std::is_same_v<State, typename Sophus::SE3<Scalar>>>>
+visualization_msgs::msg::MarkerArray& assign_particle_cloud(
     Particles&& particles,
     Scalar linear_resolution,
     Scalar angular_resolution,
-    beluga_ros::msg::MarkerArray& message) {
+    visualization_msgs::msg::MarkerArray& message) {
   // Particle weights from the filter may or may not be representative of the
   // true distribution. If we resampled, they are not, and there will be multiple copies
   // of the most likely candidates, all with unit weight. In this case the number of copies
@@ -210,8 +239,8 @@ beluga_ros::msg::MarkerArray& assign_particle_cloud(
   arrow_bodies.color.a = 1.0;
   arrow_bodies.pose.orientation.w = 1.0;
   arrow_bodies.lifetime.sec = 1;
-  arrow_bodies.type = beluga_ros::msg::Marker::LINE_LIST;
-  arrow_bodies.action = beluga_ros::msg::Marker::ADD;
+  arrow_bodies.type = visualization_msgs::msg::Marker::LINE_LIST;
+  arrow_bodies.action = visualization_msgs::msg::Marker::ADD;
   arrow_bodies.points.reserve(histogram.size() * 2);  // 2 vertices per arrow body
   arrow_bodies.colors.reserve(histogram.size() * 2);
 
@@ -224,8 +253,8 @@ beluga_ros::msg::MarkerArray& assign_particle_cloud(
   arrow_heads.color.a = 1.0;
   arrow_heads.pose.orientation.w = 1.0;
   arrow_heads.lifetime.sec = 1;
-  arrow_heads.type = beluga_ros::msg::Marker::TRIANGLE_LIST;
-  arrow_heads.action = beluga_ros::msg::Marker::ADD;
+  arrow_heads.type = visualization_msgs::msg::Marker::TRIANGLE_LIST;
+  arrow_heads.action = visualization_msgs::msg::Marker::ADD;
   arrow_heads.points.reserve(histogram.size() * 3);  // 3 vertices per arrow head
   arrow_heads.colors.reserve(histogram.size() * 3);
 
@@ -271,7 +300,9 @@ template <
     class Particle = ranges::range_value_t<Particles>,
     class State = typename beluga::state_t<Particle>,
     class Scalar = typename State::Scalar>
-beluga_ros::msg::MarkerArray& assign_particle_cloud(Particles&& particles, beluga_ros::msg::MarkerArray& message) {
+visualization_msgs::msg::MarkerArray& assign_particle_cloud(
+    Particles&& particles,
+    visualization_msgs::msg::MarkerArray& message) {
   constexpr auto kDefaultLinearResolution = Scalar{1e-3};   // ie. 1 mm
   constexpr auto kDefaultAngularResolution = Scalar{1e-3};  // ie. 0.05 degrees
   return assign_particle_cloud(

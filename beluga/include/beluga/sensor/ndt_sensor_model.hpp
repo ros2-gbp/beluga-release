@@ -15,6 +15,12 @@
 #ifndef BELUGA_SENSOR_NDT_SENSOR_MODEL_HPP
 #define BELUGA_SENSOR_NDT_SENSOR_MODEL_HPP
 
+#ifndef BELUGA_HAS_HDF5
+
+#error "This file requires HDF5. Please install HDF5 and recompile Beluga with it."
+
+#else
+
 #include <cassert>
 #include <cstdint>
 #include <filesystem>
@@ -57,9 +63,9 @@ struct CellHasher {
 
 /// Fit a vector of points to an NDT cell, by computing its mean and covariance.
 template <int NDim, typename Scalar = double>
-inline NDTCell<NDim, Scalar> fit_points(const std::vector<Eigen::Vector<Scalar, NDim>>& points) {
+inline NDTCell<NDim, Scalar> fit_points(const std::vector<Eigen::Vector<Scalar, NDim> >& points) {
   static constexpr double kMinVariance = 1e-5;
-  Eigen::Map<const Eigen::Matrix<Scalar, NDim, Eigen::Dynamic>> points_view(
+  Eigen::Map<const Eigen::Matrix<Scalar, NDim, Eigen::Dynamic> > points_view(
       reinterpret_cast<const Scalar*>(points.data()), NDim, static_cast<int64_t>(points.size()));
   const Eigen::Vector<Scalar, NDim> mean = points_view.rowwise().mean();
   const Eigen::Matrix<Scalar, NDim, Eigen::Dynamic> centered = points_view.colwise() - mean;
@@ -78,18 +84,18 @@ inline NDTCell<NDim, Scalar> fit_points(const std::vector<Eigen::Vector<Scalar, 
 /// points using 'resolution' and fitting a normal distribution to each of the resulting clusters if they contain a
 /// minimum number of points in them.
 template <int NDim, typename Scalar = double>
-inline std::vector<NDTCell<NDim, Scalar>> to_cells(
-    const std::vector<Eigen::Vector<Scalar, NDim>>& points,
+inline std::vector<NDTCell<NDim, Scalar> > to_cells(
+    const std::vector<Eigen::Vector<Scalar, NDim> >& points,
     const double resolution) {
   static constexpr int kMinPointsPerCell = 5;
 
-  const Eigen::Map<const Eigen::Matrix<Scalar, NDim, Eigen::Dynamic>> points_view(
+  const Eigen::Map<const Eigen::Matrix<Scalar, NDim, Eigen::Dynamic> > points_view(
       reinterpret_cast<const Scalar*>(points.data()), NDim, static_cast<int64_t>(points.size()));
 
-  std::vector<NDTCell<NDim, Scalar>> ret;
+  std::vector<NDTCell<NDim, Scalar> > ret;
   ret.reserve(static_cast<size_t>(points_view.cols()) / kMinPointsPerCell);
 
-  std::unordered_map<Eigen::Vector<int, NDim>, std::vector<Eigen::Vector<Scalar, NDim>>, CellHasher<NDim>> cell_grid;
+  std::unordered_map<Eigen::Vector<int, NDim>, std::vector<Eigen::Vector<Scalar, NDim> >, CellHasher<NDim> > cell_grid;
   for (const Eigen::Vector<Scalar, NDim>& col : points) {
     cell_grid[(col / resolution).template cast<int>()].emplace_back(col);
   }
@@ -131,7 +137,7 @@ const std::vector<Eigen::Vector3i> kDefaultNeighborKernel3d = {
 
 /// Helper to get the default neighbors kernel
 template <int NDim>
-constexpr std::conditional_t<NDim == 2, std::vector<Eigen::Vector2i>, std::vector<Eigen::Vector3i>>
+constexpr std::conditional_t<NDim == 2, std::vector<Eigen::Vector2i>, std::vector<Eigen::Vector3i> >
 get_default_neighbors_kernel() {
   if constexpr (NDim == 2) {
     return kDefaultNeighborKernel2d;
@@ -153,7 +159,7 @@ struct NDTModelParam {
   /// Scaling parameter d2 in literature, used for scaling likelihoods.
   double d2 = 1.0;
   /// Neighbor kernel used for likelihood computation.
-  std::conditional_t<NDim == 2, std::vector<Eigen::Vector2i>, std::vector<Eigen::Vector3i>> neighbors_kernel =
+  std::conditional_t<NDim == 2, std::vector<Eigen::Vector2i>, std::vector<Eigen::Vector3i> > neighbors_kernel =
       detail::get_default_neighbors_kernel<NDim>();
 };
 
@@ -181,11 +187,11 @@ class NDTSensorModel {
   using state_type = std::conditional_t<
       ndt_cell_type::num_dim == 2,
       Sophus::SE2<typename ndt_cell_type::scalar_type>,
-      Sophus::SE3<typename ndt_cell_type::scalar_type>>;
+      Sophus::SE3<typename ndt_cell_type::scalar_type> >;
   /// Weight type of the particle.
   using weight_type = double;
   /// Measurement type of the sensor: a point cloud for the range finder.
-  using measurement_type = std::vector<Eigen::Vector<typename ndt_cell_type::scalar_type, ndt_cell_type::num_dim>>;
+  using measurement_type = std::vector<Eigen::Vector<typename ndt_cell_type::scalar_type, ndt_cell_type::num_dim> >;
   /// Map representation type.
   using map_type = SparseGridT;
   /// Parameter type that the constructor uses to configure the NDT sensor model.
@@ -239,20 +245,26 @@ class NDTSensorModel {
 
 namespace io {
 
-/// Loads a 2D NDT map representation from a hdf5 file, with the following datasets:
+/// Loads a 2D or 3D NDT map representation from a hdf5 file, with the following datasets:
 /// - "resolution": () resolution for the discrete grid (cells are resolution x
-///   resolution m^2 squares).
-/// - "cells": (NUM_CELLS, 2) that contains the cell coordinates.
-/// - "means": (NUM_CELLS, 2) that contains the 2d mean of the normal distribution
+///   resolution m^2 squares for the 2D case and resolution**3 cubes for the 3D case).
+/// - "cells": (NUM_CELLS, 2 / 3) that contains the cell coordinates.
+/// - "means": (NUM_CELLS, 2 / 3) that contains the 2d mean of the normal distribution
 ///   of the cell.
-/// - "covariances": (NUM_CELLS, 2, 2) Contains the covariance for each cell.
+/// - "covariances": (NUM_CELLS, 2 / 3, 2 / 3) Contains the covariance for each cell.
 ///
 ///  \tparam NDTMapRepresentation A specialized SparseValueGrid (see sensor/data/sparse_value_grid.hpp), where
-///  mapped_type == NDTCell2d, that will represent the NDT map as a mapping from 2D cells to NDTCells.
+///  mapped_type == NDTCell2d / NDTCell3d, that will represent the NDT map as a mapping from 2D / 3D cells to NDTCells.
 template <typename NDTMapRepresentationT>
-NDTMapRepresentationT load_from_hdf5_2d(const std::filesystem::path& path_to_hdf5_file) {
-  static_assert(std::is_same_v<typename NDTMapRepresentationT::mapped_type, NDTCell2d>);
-  static_assert(std::is_same_v<typename NDTMapRepresentationT::key_type, Eigen::Vector2i>);
+NDTMapRepresentationT load_from_hdf5(const std::filesystem::path& path_to_hdf5_file) {
+  static_assert(
+      std::is_same_v<typename NDTMapRepresentationT::mapped_type, NDTCell2d> or
+      std::is_same_v<typename NDTMapRepresentationT::mapped_type, NDTCell3d>);
+  static_assert(
+      std::is_same_v<typename NDTMapRepresentationT::key_type, Eigen::Vector2i> or
+      std::is_same_v<typename NDTMapRepresentationT::key_type, Eigen::Vector3i>);
+
+  constexpr int kNumDim = NDTMapRepresentationT::key_type::RowsAtCompileTime;
   if (!std::filesystem::exists(path_to_hdf5_file) || std::filesystem::is_directory(path_to_hdf5_file)) {
     std::stringstream ss;
     ss << "Couldn't find a valid HDF5 file at " << path_to_hdf5_file;
@@ -274,13 +286,13 @@ NDTMapRepresentationT load_from_hdf5_2d(const std::filesystem::path& path_to_hdf
       static_cast<std::size_t>(dims_out[1]),
   };
 
-  Eigen::Matrix2Xd means_matrix(dims[1], dims[0]);
-  Eigen::Matrix2Xi cells_matrix(dims[1], dims[0]);
+  Eigen::Matrix<double, kNumDim, Eigen::Dynamic> means_matrix(dims[1], dims[0]);
+  Eigen::Matrix<int, kNumDim, Eigen::Dynamic> cells_matrix(dims[1], dims[0]);
 
   means_dataset.read(means_matrix.data(), H5::PredType::NATIVE_DOUBLE);
   cells_dataset.read(cells_matrix.data(), H5::PredType::NATIVE_INT);
 
-  std::vector<Eigen::Array<double, 2, 2>> covariances(dims[0]);
+  std::vector<Eigen::Array<double, kNumDim, kNumDim> > covariances(dims[0]);
   covariances_dataset.read(covariances.data(), H5::PredType::NATIVE_DOUBLE);
 
   double resolution;
@@ -292,7 +304,7 @@ NDTMapRepresentationT load_from_hdf5_2d(const std::filesystem::path& path_to_hdf
   // Note: Ranges::zip_view doesn't seem to work in old Eigen.
   for (size_t i = 0; i < covariances.size(); ++i) {
     map[cells_matrix.col(static_cast<Eigen::Index>(i))] =
-        NDTCell2d{means_matrix.col(static_cast<Eigen::Index>(i)), covariances.at(i)};
+        NDTCell<kNumDim, double>{means_matrix.col(static_cast<Eigen::Index>(i)), covariances.at(i)};
   }
 
   return NDTMapRepresentationT{std::move(map), resolution};
@@ -301,5 +313,7 @@ NDTMapRepresentationT load_from_hdf5_2d(const std::filesystem::path& path_to_hdf
 }  // namespace io
 
 }  // namespace beluga
+
+#endif  // BELUGA_HAS_HDF5
 
 #endif
