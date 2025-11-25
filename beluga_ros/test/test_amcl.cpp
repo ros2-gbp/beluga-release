@@ -22,16 +22,13 @@
 
 #include <Eigen/Core>
 
-#if BELUGA_ROS_VERSION == 1
-#include <boost/smart_ptr.hpp>
-#endif
-
 #include <beluga/motion/differential_drive_model.hpp>
 #include <beluga/sensor/likelihood_field_model.hpp>
 
 #include "beluga_ros/amcl.hpp"
 #include "beluga_ros/laser_scan.hpp"
 #include "beluga_ros/messages.hpp"
+#include "beluga_ros/sparse_point_cloud.hpp"
 
 namespace {
 
@@ -39,13 +36,7 @@ auto make_dummy_occupancy_grid() {
   constexpr std::size_t kWidth = 100;
   constexpr std::size_t kHeight = 200;
 
-#if BELUGA_ROS_VERSION == 2
-  auto message = std::make_shared<beluga_ros::msg::OccupancyGrid>();
-#elif BELUGA_ROS_VERSION == 1
-  auto message = boost::make_shared<beluga_ros::msg::OccupancyGrid>();
-#else
-#error BELUGA_ROS_VERSION is not defined or invalid
-#endif
+  auto message = std::make_shared<nav_msgs::msg::OccupancyGrid>();
   message->info.resolution = 0.1F;
   message->info.width = kWidth;
   message->info.height = kHeight;
@@ -58,15 +49,34 @@ auto make_dummy_occupancy_grid() {
 }
 
 auto make_dummy_laser_scan() {
-#if BELUGA_ROS_VERSION == 2
-  auto message = std::make_shared<beluga_ros::msg::LaserScan>();
-#elif BELUGA_ROS_VERSION == 1
-  auto message = boost::make_shared<beluga_ros::msg::LaserScan>();
-#endif
+  auto message = std::make_shared<sensor_msgs::msg::LaserScan>();
   message->ranges = std::vector<float>{1., 2., 3.};
   message->range_min = 10.F;
   message->range_max = 100.F;
   return beluga_ros::LaserScan(message);
+}
+
+auto make_dummy_point_cloud() {
+  auto message = std::make_shared<sensor_msgs::msg::PointCloud2>();
+  message->width = 1;
+  message->height = 1;
+  message->is_dense = true;
+  message->is_bigendian = false;
+
+  sensor_msgs::PointCloud2Modifier modifier(*message);
+  modifier.setPointCloud2Fields(
+      3, "x", 1, sensor_msgs::msg::PointField::FLOAT32, "y", 1, sensor_msgs::msg::PointField::FLOAT32, "z", 1,
+      sensor_msgs::msg::PointField::FLOAT32);
+  modifier.resize(1);
+
+  sensor_msgs::PointCloud2Iterator<double> iter_x(*message, "x");  // NOLINT(misc-const-correctness)
+  sensor_msgs::PointCloud2Iterator<double> iter_y(*message, "y");  // NOLINT(misc-const-correctness)
+  sensor_msgs::PointCloud2Iterator<double> iter_z(*message, "z");  // NOLINT(misc-const-correctness)
+  *iter_x = 1.0;
+  *iter_y = 0.0;
+  *iter_z = 0.0;
+
+  return beluga_ros::SparsePointCloud3f{message};
 }
 
 auto make_amcl() {
@@ -112,6 +122,26 @@ TEST(TestAmcl, UpdateWithParticles) {
   amcl.initialize_from_map();
   ASSERT_EQ(amcl.particles().size(), 50UL);
   auto estimate = amcl.update(Sophus::SE2d{}, make_dummy_laser_scan());
+  ASSERT_TRUE(estimate.has_value());
+}
+
+TEST(TestAmcl, UpdateWithParticlesAndPointCloud) {
+  auto amcl = make_amcl();
+  ASSERT_EQ(amcl.particles().size(), 0);
+  amcl.initialize_from_map();
+  ASSERT_EQ(amcl.particles().size(), 50UL);
+  auto estimate = amcl.update(Sophus::SE2d{}, make_dummy_point_cloud());
+  ASSERT_TRUE(estimate.has_value());
+}
+
+TEST(TestAmcl, UpdateWithParticlesWithMotion) {
+  auto amcl = make_amcl();
+  ASSERT_EQ(amcl.particles().size(), 0);
+  amcl.initialize_from_map();
+  ASSERT_EQ(amcl.particles().size(), 50UL);
+  auto estimate = amcl.update(Sophus::SE2d{}, make_dummy_laser_scan());
+  ASSERT_TRUE(estimate.has_value());
+  estimate = amcl.update(Sophus::SE2d{0.0, {1.0, 0.0}}, make_dummy_laser_scan());
   ASSERT_TRUE(estimate.has_value());
 }
 

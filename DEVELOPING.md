@@ -2,9 +2,11 @@
 
 ## Table of Contents
 
+- [Table of Contents](#table-of-contents)
 - [Environment](#environment)
 - [Workflow](#workflow)
-- [CI/CD](#ci-cd)
+- [CI/CD](#cicd)
+- [Next Steps](#next-steps)
 
 ## Environment
 
@@ -36,7 +38,7 @@ To bring up a development environment:
    (cd beluga && ROSDISTRO=humble docker/run.sh)
    ```
 
-   Supported distributions include `noetic`, `humble`, `iron`, and `rolling`.
+   Supported distributions include `humble`, `jazzy`, `kilted`, and `rolling`.
 
 ## Workflow
 
@@ -47,26 +49,30 @@ Within a development environment:
 1. **Build and test the project**. You will usually use `colcon`.
 
     ```bash
+    . /opt/ros/${ROS_DISTRO}/setup.bash
     cd /ws
     colcon build --symlink-install
     colcon test
     ```
 
-    You may also use `catkin_make_isolated` and `catkin-tools` for ROS 1 distributions.
-
 2. **Update package dependencies**. Listed in `package.xml` files.
 
     ```bash
+    . /opt/ros/${ROS_DISTRO}/setup.bash
     cd /ws
     rosdep update
     rosdep install --from-path src
     ```
 
+
+> [!IMPORTANT]
+> `beluga_vdb` requires OpenVDB to be installed in order to be used. For Ubuntu distributions previous to `Noble` OpenVDB needs to be installed from sources before building. Installation instructions can be found [here](beluga_vdb/README.md). If you don't need `beluga_vdb`, you can skip it using `colcon build --symlink-install --packages-ignore beluga_vdb`.
+
 For more advanced tooling, check repository [tools](./tools).
 
 ## CI/CD
 
-Every pull request and every push to the project repository `main` branch will be subject to a [continuous integration workflow](./.github/workflows/ci_pipeline.yml). This workflow will lint project sources, static analyze, build, and test project packages against the project platform support matrix, enforcing its code coverage policy, and build project documentation (which will be deployed to Github Pages when pushing to `main`).
+Every pull request and every push to the project repository `main` branch will be subject to a [continuous integration workflow](./.github/workflows/colcon.yml). This workflow will lint project sources, static analyze, build, and test project packages against the project platform support matrix, enforcing its code coverage policy, and build project documentation (which will be deployed to Github Pages when pushing to `main`).
 
 Pull request acceptance is predicated on these checks passing.
 
