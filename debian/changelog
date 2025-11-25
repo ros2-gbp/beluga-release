@@ -1,0 +1,42 @@
+ros-kilted-beluga-ros (2.1.0-1bookworm) bookworm; urgency=high
+
+  * Remove ROS 1 references and documentation (#528 <https://github.com/Ekumen-OS/beluga/issues/528>)
+  * Drop Noetic support (#520 <https://github.com/Ekumen-OS/beluga/issues/520>)
+  * Add support for point clouds in beluga_amcl (#491 <https://github.com/Ekumen-OS/beluga/issues/491>)
+  * Add support for ROS 2 nodes test isolation (#497 <https://github.com/Ekumen-OS/beluga/issues/497>)
+  * Expose model_unknown_space parameter to ROS2 (#448 <https://github.com/Ekumen-OS/beluga/issues/448>)
+  * Add ROS Kilted Kaiju support (#485 <https://github.com/Ekumen-OS/beluga/issues/485>)
+  * Add likelihood prob sensor model and enable Beluga's flavour of clustering (#476 <https://github.com/Ekumen-OS/beluga/issues/476>)
+  * Contributors: Andrés Brumovsky, Diego Palma, Michel Hidalgo, Nahuel Espinosa, Xavi Ruiz, Florencia Battocchia
+
+ -- Gerardo Puga <glpuga@ekumenlabs.com>  Tue, 25 Nov 2025 03:00:00 -0000
+
+ros-kilted-beluga-ros (2.0.2-1bookworm) bookworm; urgency=high
+
+
+
+ -- Gerardo Puga <glpuga@ekumenlabs.com>  Tue, 18 Jun 2024 03:00:00 -0000
+
+ros-kilted-beluga-ros (2.0.1-1bookworm) bookworm; urgency=high
+
+
+
+ -- Gerardo Puga <glpuga@ekumenlabs.com>  Fri, 24 May 2024 03:00:00 -0000
+
+ros-kilted-beluga-ros (2.0.0-1bookworm) bookworm; urgency=high
+
+  * Please clang-tidy on Ubuntu Noble (#379 <https://github.com/Ekumen-OS/beluga/issues/379>)
+  * Restore particle cloud visualization using markers (#377 <https://github.com/Ekumen-OS/beluga/issues/377>)
+  * Use geometry_msgs::msg::PoseArray instead of nav2_msgs::msg::ParticleCloud (#372 <https://github.com/Ekumen-OS/beluga/issues/372>)
+  * Improve ROS version detection logic (#366 <https://github.com/Ekumen-OS/beluga/issues/366>)
+  * Unify Beluga documentation (#346 <https://github.com/Ekumen-OS/beluga/issues/346>)
+  * Deprecate all the (mixin) things (#330 <https://github.com/Ekumen-OS/beluga/issues/330>)
+  * Instrument ROS occupancy grid to NDT map conversion (#332 <https://github.com/Ekumen-OS/beluga/issues/332>)
+  * Add AMCL implementation for ROS (#327 <https://github.com/Ekumen-OS/beluga/issues/327>)
+  * Generalize planar laser scan support (#271 <https://github.com/Ekumen-OS/beluga/issues/271>)
+  * Add beluga_ros package (#270 <https://github.com/Ekumen-OS/beluga/issues/270>)
+  * Contributors: Michel Hidalgo, Nahuel Espinosa, Ramiro Serra
+
+ -- Gerardo Puga <glpuga@ekumenlabs.com>  Tue, 21 May 2024 03:00:00 -0000
+
+
