@@ -1,3 +1,37 @@
+## beluga (humble) - 2.1.1-1
+
+The packages in the `beluga` repository were released into the `humble` distro by running `/usr/bin/bloom-release beluga --track humble --rosdistro humble` on `Tue, 21 Apr 2026 15:24:04 -0000`
+
+These packages were released:
+- `beluga`
+- `beluga_amcl`
+- `beluga_ros`
+
+These packages were explicitly ignored:
+- `beluga_benchmark`
+- `beluga_example`
+- `beluga_system_tests`
+- `beluga_tutorial`
+- `beluga_tools`
+- `beluga_vdb`
+
+Version of package(s) in repository `beluga`:
+
+- upstream repository: https://github.com/Ekumen-OS/beluga.git
+- release repository: https://github.com/ros2-gbp/beluga-release.git
+- rosdistro version: `2.1.0-1`
+- old version: `2.1.0-1`
+- new version: `2.1.1-1`
+
+Versions of tools used:
+
+- bloom version: `0.13.0`
+- catkin_pkg version: `1.1.0`
+- rosdep version: `0.26.0`
+- rosdistro version: `1.0.1`
+- vcstools version: `0.1.42`
+
+
 ## beluga (kilted) - 2.1.0-1
 
 The packages in the `beluga` repository were released into the `kilted` distro by running `/usr/bin/bloom-release --rosdistro kilted --track kilted beluga --edit` on `Tue, 25 Nov 2025 20:05:13 -0000`
