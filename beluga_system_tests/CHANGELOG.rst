@@ -2,6 +2,11 @@
 Changelog for package beluga_system_tests
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+2.1.1 (2026-04-20)
+------------------
+* Add paranoid mode (`#557 <https://github.com/Ekumen-OS/beluga/issues/557>`_)
+* Contributors: Michel Hidalgo
+
 2.1.0 (2025-11-25)
 ------------------
 * Drop Noetic support (`#520 <https://github.com/Ekumen-OS/beluga/issues/520>`_)
