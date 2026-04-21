@@ -1,52 +1,92 @@
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Ekumen-OS/beluga/assets/33042669/45f1d364-4c93-48b8-8912-f5b879ecc76a">
-  <source media="(prefers-color-scheme: light)" srcset="https://github.com/Ekumen-OS/beluga/assets/33042669/83b32f5b-9102-4266-83bd-33c0427cb208">
-  <img alt="Shows the Beluga logo." src="https://github.com/Ekumen-OS/beluga/assets/33042669/83b32f5b-9102-4266-83bd-33c0427cb208">
-</picture>
+# Beluga AMCL
 
----
+Beluga AMCL is a ROS node based on the [Beluga](../beluga) library that aims to be fully compatible with the [Navigation 2 AMCL][nav2_amcl] node.<br/>
+The compatibility between `beluga_amcl` and its longstanding counterparts in the ROS ecosystem provides a simple migration path for projects that want to be able to integrate the power and modularity of the Beluga library in an existing `nav2_amcl`-based project.
 
-[![Colcon CI pipeline](https://github.com/Ekumen-OS/beluga/actions/workflows/colcon.yml/badge.svg?branch=main)](https://github.com/Ekumen-OS/beluga/actions/workflows/colcon.yml?query=branch:main)
-[![Bazel CI pipeline](https://github.com/Ekumen-OS/beluga/actions/workflows/bazel.yml/badge.svg?branch=main)](https://github.com/Ekumen-OS/beluga/actions/workflows/bazel.yml?query=branch:main)
-[![codecov](https://codecov.io/gh/Ekumen-OS/beluga/branch/main/graph/badge.svg?token=rK7BNC5giK)](https://codecov.io/gh/Ekumen-OS/beluga)
-[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
-[![License Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+## Table of Contents
 
-> [!TIP]
-> For the latest stable version of our codebase, please refer to the [release](https://github.com/Ekumen-OS/beluga/tree/release) branch.
-> If you are interested in ongoing development and cutting-edge features, the [main](https://github.com/Ekumen-OS/beluga/tree/main) branch is the place to be.
+- [Beluga AMCL](#beluga-amcl)
+  - [Table of Contents](#table-of-contents)
+  - [ROS Interface](#ros-interface)
+    - [Parameters](#parameters)
+    - [Subscribed Topics](#subscribed-topics)
+    - [Published Topics](#published-topics)
+    - [Published Transforms](#published-transforms)
+    - [Advertised Services](#advertised-services)
+  - [Performance](#performance)
+  - [Compatibility](#compatibility-notes)
+  - [Next Steps](#next-steps)
 
-## 🌐 Overview
+## ROS Interface
 
-Beluga is an extensible C++17 library with a ground-up implementation of the Monte Carlo Localization (MCL) family of estimation algorithms featuring:
+### Parameters
 
-- A modular design based on orthogonal components.
-- Emphasis on the prevention of regressions and facilitation of code improvements through test coverage.
-- Semi-automated benchmarks that can be used to validate different configurations.
+Beluga AMCL currently supports almost all of the ROS parameters used in [Navigation 2 AMCL][nav2_amcl].<br/>
+See [Beluga AMCL documentation](https://ekumen-os.github.io/beluga/packages/beluga_amcl/docs/ros2-reference.html) for further reference.
 
-https://github.com/user-attachments/assets/59bca7ea-fe78-4460-b058-96a5c75d09ec
+### Subscribed Topics
 
-<p align="center"><i><b>Beluga AMCL</b> running on a <b>Turtlebot 2</b> robot (Raspberry Pi 4B)</i></p>
+The subscribed topic names can be changed with the parameters `map_topic`, `scan_topic`, and `initial_pose_topic`.
 
-https://github.com/Ekumen-OS/beluga/assets/33042669/98bda0ee-a633-4e35-8743-72a9ab30b494
+| Topic            | Type                                      | Description                                                                 |
+|------------------|-------------------------------------------|-----------------------------------------------------------------------------|
+| `map`            | `nav_msgs/OccupancyGrid`                  | Input topic for map updates.                                                |
+| `scan`           | `sensor_msgs/LaserScan`                   | Input topic for laser scan updates.                                         |
+| `initial_pose`   | `geometry_msgs/PoseWithCovarianceStamped` | Input topic for pose mean and covariance to initialize the particle filter. |
 
-<p align="center"><i><b>Beluga AMCL</b> running on an <b>Andino</b> robot (Raspberry Pi 4B), go to <a href="https://github.com/Ekumen-OS/andino">Ekumen-OS/andino</a> for more details!</i></p>
+Alternatively, and instead of the `scan_topic`, one may set the `point_cloud_topic`. Point clouds are assumed to be contained in a z = constant
+plane in the base frame of reference. It is further assumed this plane is the same plane where the map and pose estimates are defined. If this
+is not the case, Beluga AMCL will misbehave. It is on the user to filter point clouds and make sure these assumption hold.
 
-## 📦 Packages
+### Published Topics
 
-This repository contains the following packages:
+| Topic              | Type                                      | Description                                                              |
+|--------------------|-------------------------------------------|--------------------------------------------------------------------------|
+| `particle_cloud`   | `geometry_msgs/PoseArray`                 | Output topic for particle cloud poses published at a fixed frequency.    |
+| `particle_markers` | `visualization_msgs/MarkerArray`          | Output topic for particle cloud markers published at a fixed frequency.  |
+| `likelihood_field` | `nav_msgs/OccupancyGrid`                  | Output topic for likelihood field, published on update when applicable.  |
+| `pose`             | `geometry_msgs/PoseWithCovarianceStamped` | Output topic for estimated pose mean and covariance in map frame.        |
 
-| Package                                      | Description                                                                                                             |
-|----------------------------------------------| ------------------------------------------------------------------------------------------------------------------------|
-| [`beluga`](beluga)                           | A ROS-agnostic extensible library to implement algorithms based on particle filters.                                    |
-| [`beluga_ros`](beluga)                       | A ROS library, providing utilities to interface ROS with Beluga.                                                        |
-| [`beluga_amcl`](beluga_amcl)                 | A ROS wrapper, providing an executable node and component (or nodelet).<br> It provides interface parity with `nav2_amcl` (and `amcl`). |
-| [`beluga_example`](beluga_example)           | Example launch files, showing how to run Beluga-based nodes.                                                            |
-| [`beluga_benchmark`](beluga_benchmark)       | Scripts to benchmark, profile and also compare Beluga with other MCL implementations.                                   |
-| [`beluga_system_tests`](beluga_system_tests) | System integration tests for Beluga.                                                                                    |
-| [`beluga_vdb`](beluga_vdb) | A library extension for `beluga` facilitating the use of OpenVDB for 3D localization.                                                                                    |
+### Published Transforms
 
-## ⚙️ First Steps
+The frame names can be changed with the parameters `global_frame_id`, `odom_frame_id` and `base_frame_id`.
+Defaults are `map`, `odom` and `base`.
 
-- Go check the [project documentation](https://ekumen-os.github.io/beluga).
-- Read the [contributing guidelines](CONTRIBUTING.md).
+| Transform         | Description                                                                                        |
+|-------------------|----------------------------------------------------------------------------------------------------|
+| `odom` to `base`  | Input transform used by motion models and resampling policies.                                     |
+| `base` to `laser` | Input transform used to convert laser scan points to base frame.                                   |
+| `map` to `odom`   | Output transform calculated from the estimated pose mean and the current _odom-to-base_ transform. |
+
+### Advertised Services
+
+| Topic                              | Type             | Description                                                                   |
+|------------------------------------|------------------|-------------------------------------------------------------------------------|
+| `reinitialize_global_localization` | `std_srvs/Empty` | Request to reinitialize global localization without an initial pose estimate. |
+| `request_nomotion_update`          | `std_srvs/Empty` | Trigger a forced update of the filter estimates.                              |
+
+## Performance
+
+Performance reports are periodically generated to track improvements and regressions. These reports are produced using the scripts in the [beluga_benchmark](../beluga_benchmark) package, which allow comparing the performance of `beluga_amcl` against `nav2_amcl` using a synthetic dataset.
+
+<figure>
+  <img src="/beluga_amcl/docs/_images/beluga_vs_nav2.png" alt="Beluga Vs Nav2">
+  <figcaption><strong>Typical trajectory plot</strong>: the ground-truth and both AMCL trajectories are so close that they effectively overlap.</figcaption>
+</figure>
+
+Further details on the benchmarking methodology and datasets can be found in the blog post [Big shoes to fill: Validating the performance of Beluga AMCL](https://ekumenlabs.com/blog/posts/big-shoes-to-fill-beluga-performance-report/)
+
+## Compatibility notes
+
+Beluga AMCL is a feature-by-feature re-implemention of the existing Nav2 AMCL package in ROS, but using the Beluga library as the underlying engine.
+
+Notes on parameter and feature availability between Beluga AMCL and Nav2 AMCL can be found [here](https://ekumen-os.github.io/beluga/packages/beluga_amcl/docs/ros2-reference.html#compatibility-notes).
+
+## Next Steps
+
+- See [example launch files](../beluga_example) showing how to run Beluga-based nodes.
+- See [available benchmarks](../beluga_benchmark) for scripts and comparison with other AMCL implementations.
+
+[nav2_amcl]: https://github.com/ros-planning/navigation2/tree/main/nav2_amcl
+[nav2_configuration_guide]: https://navigation.ros.org/configuration/packages/configuring-amcl.html
+[fox2001]: https://dl.acm.org/doi/10.5555/2980539.2980632
