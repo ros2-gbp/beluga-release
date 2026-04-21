@@ -12,24 +12,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@package_metadata//licenses/rules:license.bzl", "license")
+load("@package_metadata//purl:purl.bzl", "purl")
+load("@package_metadata//rules:package_metadata.bzl", "package_metadata")
 
-cc_library(
-    name = "beluga",
-    hdrs = glob(["include/**/*.hpp"]),
-    defines = select({
-        "@rules_cc//cc/compiler:msvc-cl": ["_USE_MATH_DEFINES"],
-        "//conditions:default": [],
-    }),
-    features = [
-        "parse_headers",
+license(
+    name = "package_metadata_license",
+    kind = "@package_metadata//licenses/spdx:Apache-2.0",
+    text = "LICENSE",
+)
+
+package_metadata(
+    name = "package_metadata",
+    attributes = [
+        ":package_metadata_license",
     ],
-    includes = ["include"],
+    purl = purl.bazel(
+        module_name(),
+        module_version(),
+    ),
     visibility = ["//visibility:public"],
-    deps = [
-        "@eigen",
-        "@onetbb//:tbb",
-        "@range-v3",
-        "@sophus",
-    ],
+)
+
+alias(
+    name = "beluga",
+    actual = "//beluga",
+    visibility = ["//visibility:public"],
 )
