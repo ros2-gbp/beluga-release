@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Ekumen, Inc.
+// Copyright 2025 Ekumen, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,21 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef BELUGA_VIEWS_HPP
-#define BELUGA_VIEWS_HPP
+#ifndef BELUGA_MIXINS_HPP
+#define BELUGA_MIXINS_HPP
 
-#include <beluga/views/elements.hpp>
-#include <beluga/views/likelihoods.hpp>
-#include <beluga/views/particles.hpp>
-#include <beluga/views/random_intersperse.hpp>
-#include <beluga/views/sample.hpp>
-#include <beluga/views/take_evenly.hpp>
-#include <beluga/views/take_while_kld.hpp>
-#include <beluga/views/zip.hpp>
-
-/**
- * \file
- * \brief Implementation of useful container views.
- */
+#include <beluga/mixins/enable_self.hpp>
 
 #endif
