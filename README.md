@@ -1,3 +1,37 @@
+## beluga (lyrical) - 2.2.0-1
+
+The packages in the `beluga` repository were released into the `lyrical` distro by running `/usr/bin/bloom-release --rosdistro lyrical --track lyrical beluga --edit` on `Thu, 05 Nov 2026 19:52:54 -0000`
+
+These packages were released:
+- `beluga`
+- `beluga_amcl`
+- `beluga_ros`
+
+These packages were explicitly ignored:
+- `beluga_benchmark`
+- `beluga_example`
+- `beluga_system_tests`
+- `beluga_tutorial`
+- `beluga_tools`
+- `beluga_vdb`
+
+Version of package(s) in repository `beluga`:
+
+- upstream repository: https://github.com/Ekumen-OS/beluga.git
+- release repository: unknown
+- rosdistro version: `null`
+- old version: `null`
+- new version: `2.2.0-1`
+
+Versions of tools used:
+
+- bloom version: `0.14.3`
+- catkin_pkg version: `1.1.0`
+- rosdep version: `0.26.0`
+- rosdistro version: `1.1.0`
+- vcstools version: `0.1.42`
+
+
 ## beluga (kilted) - 2.1.1-1
 
 The packages in the `beluga` repository were released into the `kilted` distro by running `/usr/bin/bloom-release beluga --track kilted --rosdistro kilted` on `Tue, 21 Apr 2026 16:50:58 -0000`
