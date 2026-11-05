@@ -22,7 +22,7 @@ import subprocess
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = "Beluga ROS"
+project = "Beluga"
 copyright = "2022-2024 Ekumen, Inc."
 author = "Ekumen Research"
 
@@ -41,20 +41,64 @@ extensions = [
     "sphinx.ext.graphviz",
     "sphinx_copybutton",
     "sphinx.ext.inheritance_diagram",
-    "sphinx_design",
+    "sphinx.ext.githubpages",
     "sphinx_babel.autodox",
     "sphinxcontrib.bibtex",
+    "sphinx_design",
 ]
 
 bibtex_bibfiles = ["references.bib"]
 
-myst_enable_extensions = ["colon_fence"]
+myst_enable_extensions = [
+    "attrs_inline",
+    "colon_fence",
+    "deflist",
+    "dollarmath",
+]
 myst_heading_anchors = 4
 
-autodox_outdir = "_doxygen/generated"
-autodox_projects = {"reference": ""}
+autodox_projects = {
+    "beluga": {
+        "srcdir": "packages/beluga/docs",
+        "outdir": "packages/beluga/docs/_doxygen/generated/reference",
+    },
+    "beluga_ros": {
+        "srcdir": "packages/beluga_ros/docs",
+        "outdir": "packages/beluga_ros/docs/_doxygen/generated/reference",
+        "tagfiles": [
+            (
+                "packages/beluga/docs/_doxygen/generated/reference/html/tagfile.xml",
+                "packages/beluga/docs/_doxygen/generated/reference/html",
+            )
+        ],
+    },
+    "beluga_amcl": {
+        "srcdir": "packages/beluga_amcl/docs",
+        "outdir": "packages/beluga_amcl/docs/_doxygen/generated/reference",
+        "tagfiles": [
+            (
+                "packages/beluga/docs/_doxygen/generated/reference/html/tagfile.xml",
+                "packages/beluga/docs/_doxygen/generated/reference/html",
+            ),
+            (
+                "packages/beluga_ros/docs/_doxygen/generated/reference/html/tagfile.xml",
+                "packages/beluga_ros/docs/_doxygen/generated/reference/html",
+            ),
+        ],
+    },
+}
 
-exclude_patterns = ["README.md", "_build", "_external/*.md"]
+exclude_patterns = [
+    "README.md",
+    "**/README.md",
+    "CHANGELOG.rst",
+    "**/CHANGELOG.rst",
+    "venv",
+    "**/venv",
+    "_build",
+    "**/_build",
+    "**/_doxygen/*.md",
+]
 suppress_warnings = ["myst.header"]
 
 # -- Options for HTML output -------------------------------------------------
