@@ -1,0 +1,5 @@
+repositories:
+  flatland:
+    type: git
+    url: https://github.com/avidbots/flatland.git
+    version: fc3f233ed1a8009658f9eed827d1adea1cf6a511
