@@ -26,6 +26,6 @@ html: Makefile
 	@$(SPHINXBUILD) -M html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 clean:
-	@$(RM) -fr "$(BUILDDIR)" `$(FIND) -L "$(SOURCEDIR)" -name generated -type d`
+	@$(RM) -fr "$(BUILDDIR)" `$(FIND) "$(SOURCEDIR)" -name generated -type d`
 
 .PHONY: clean Makefile
