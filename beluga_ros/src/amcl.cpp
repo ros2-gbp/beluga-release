@@ -19,9 +19,12 @@
 #include <beluga/actions/propagate.hpp>
 #include <beluga/actions/reweight.hpp>
 #include <beluga/algorithm/cluster_based_estimation.hpp>
+#include <beluga/sensor/primitives.hpp>
+#include <beluga/views/particles.hpp>
 #include <beluga/views/random_intersperse.hpp>
 #include <beluga/views/take_while_kld.hpp>
 #include <cmath>
+#include <type_traits>
 
 namespace beluga_ros {
 
@@ -94,12 +97,22 @@ auto Amcl::update(
 
   std::visit(
       [&, this](auto& policy, auto& motion_model, auto& sensor_model) {
-        particles_ |=
-            beluga::actions::propagate(policy, motion_model(control_action_window_ << base_pose_in_odom)) |  //
-            beluga::actions::reweight(policy, sensor_model(std::move(measurement))) |                        //
-            beluga::actions::normalize(policy);
+        particles_ |= beluga::actions::propagate(policy, motion_model(control_action_window_ << base_pose_in_odom));
+        // First pass: let beam-skipping sensor models analyze the propagated particle set and
+        // precompute which beams to ignore, before the per-particle reweight below.
+        if constexpr (beluga::has_beam_skip_v<std::decay_t<decltype(sensor_model)>>) {
+          sensor_model.prepare(measurement, beluga::views::states(particles_));
+        }
       },
       execution_policy_, motion_model_, sensor_model_);
+
+  std::visit(
+      [&, this](auto& policy, auto& sensor_model) {
+        particles_ |=                                                                  //
+            beluga::actions::reweight(policy, sensor_model(std::move(measurement))) |  //
+            beluga::actions::normalize(policy);
+      },
+      execution_policy_, sensor_model_);
 
   const double random_state_probability = random_probability_estimator_(particles_);
 

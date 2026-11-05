@@ -38,6 +38,9 @@ RUN git clone -b develop https://github.com/NERSC/timemory.git \
 # Stage 3: Main builder image
 FROM ros:kilted-ros-base AS builder
 
+ARG USER=developer
+ARG GROUP=ekumen
+
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install build/debug/dev tools
@@ -57,12 +60,6 @@ RUN apt-get update \
     tmux \
   && rm -rf /var/lib/apt/lists/*
 
-ENV PIP_BREAK_SYSTEM_PACKAGES=1
-RUN pip install \
-  evo==1.21.0 \
-  pre-commit==2.20.0 \
-  plyfile==1.0.3
-
 # Install timem from previous stage
 COPY --from=timem-builder --chown=developer:ekumen /opt/timemory/ /opt/timemory
 RUN cmake --build /opt/timemory/build --target install
@@ -71,10 +68,6 @@ RUN cmake --build /opt/timemory/build --target install
 RUN perf help || ( \
   mv /usr/bin/perf /usr/bin/perf.bkp && \
   ln -s $(ls -d /usr/lib/linux-tools/* | tail -n1)/perf /usr/bin/perf)
-
-# Create developer user
-ARG USER=developer
-ARG GROUP=ekumen
 
 RUN deluser ubuntu
 
@@ -114,8 +107,6 @@ COPY --from=cacher --chown=$USER:$GROUP /tmp/ws/ $USER_WS/
 
 # Back to root to install dependencies
 USER root
-
-ENV PIP_BREAK_SYSTEM_PACKAGES=1
 
 RUN apt-get update \
   && apt-get -y dist-upgrade \

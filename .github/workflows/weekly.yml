@@ -25,7 +25,7 @@ jobs:
           - humble
           - jazzy
           - kilted
-          - rolling
+          - lyrical
         include:
           - ros_distro: humble
             upload_artifacts: true
@@ -47,27 +47,33 @@ jobs:
             python3-pip \
             python3-vcstool
 
-      - name: Install python packages
-        run: |
-             export PIP_BREAK_SYSTEM_PACKAGES=1
-             pip install pre-commit==2.20.0 \
-             h5py==3.11.0
-
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           path: ${{ github.workspace }}/src/beluga
 
       - name: Import external repositories
         working-directory: ${{ github.workspace }}/src
+        shell: bash
         run: |
           vcs import < ./beluga/docker/files/${{ matrix.ros_distro }}.repos
           rm -rf ./flatland
+          if [ -d ./beluga/docker/files/patches/${{ matrix.ros_distro }} ]; then
+            cp -r ./beluga/docker/files/patches/${{ matrix.ros_distro }} /tmp/patches
+            for subdep in */; do
+              subdep=${subdep%/}
+              if [ -f /tmp/patches/${subdep}.sh ]; then
+                echo "Post-processing $subdep source dependency"
+                pushd $subdep
+                /bin/bash /tmp/patches/${subdep}.sh
+                popd
+              fi
+            done
+          fi
 
       - name: Install dependencies
         run: |
           . /opt/ros/${{ matrix.ros_distro }}/setup.sh
-          export PIP_BREAK_SYSTEM_PACKAGES=1
           rosdep update
           sudo -E rosdep install -r --from-paths src -y -i -t exec -t build -t doc -t test
           colcon mixin add default https://raw.githubusercontent.com/colcon/colcon-mixin-repository/c75e4b34a3959524564afb584e2aa33c7eec323c/index.yaml
@@ -96,7 +102,7 @@ jobs:
         run: ./src/beluga/tools/check-code-coverage.sh
 
       - name: Upload code coverage report
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./lcov/total_coverage.info,./coveragepy/.coverage
